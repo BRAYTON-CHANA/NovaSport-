@@ -1,0 +1,39 @@
+{
+  "applicationId": "js.neutralino.mosaic",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 0,
+  "url": "/",
+  "documentRoot": "build/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "os.showMessageBox"
+  ],
+  "modes": {
+    "window": {
+      "title": "Nova Sport Software",
+      "width": 1024,
+      "height": 768,
+      "minWidth": 400,
+      "minHeight": 200,
+      "icon": "public/icon.png",
+      "enableInspector": false,
+      "exitProcessOnClose": false
+    }
+  },
+  "cli": {
+    "binaryName": "mosaic-react-app",
+    "resourcesPath": "build",
+    "clientLibrary": "build/neutralino.js",
+    "binaryVersion": "6.3.0",
+    "clientVersion": "6.3.0"
+  }
+}

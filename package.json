@@ -5,24 +5,31 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "release": "rm -rf dist .neutralino release && vite build && neu update && neu build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@radix-ui/react-popover": "^1.1.2",
     "@tailwindcss/forms": "^0.5.7",
-    "chart.js": "^4.4.1",
+    "chart.js": "^4.5.1",
     "chartjs-adapter-moment": "^1.0.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
     "moment": "^2.29.4",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-datepicker": "^8.7.0",
     "react-day-picker": "^9.4.1",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.2",
     "react-transition-group": "^4.4.5",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@neutralinojs/neu": "^11.6.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@vitejs/plugin-react": "^4.2.1",
     "postcss": "^8.4.32",

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -22,8 +22,8 @@ function RealtimeChart({
   const canvas = useRef(null);
   const chartValue = useRef(null);
   const chartDeviation = useRef(null);
-  const { currentTheme } = useThemeProvider();
-  const darkMode = currentTheme === 'dark';  
+  const { settings } = useSettings();
+  const darkMode = settings.theme === 'dark';  
   const { textColor, gridColor, tooltipTitleColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors;
 
   useEffect(() => {
@@ -142,7 +142,7 @@ function RealtimeChart({
       chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light; 
     }
     chart.update('none')
-  }, [currentTheme])    
+  }, [settings.theme])    
 
 
   return (

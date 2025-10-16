@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -21,8 +21,8 @@ function BarChart01({
   const [chart, setChart] = useState(null)
   const canvas = useRef(null);
   const legend = useRef(null);
-  const { currentTheme } = useThemeProvider();
-  const darkMode = currentTheme === 'dark';
+  const { settings } = useSettings();
+  const darkMode = settings.theme === 'dark';
   const { textColor, gridColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors;
 
   useEffect(() => {
@@ -186,7 +186,7 @@ function BarChart01({
       chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
     }
     chart.update('none');
-  }, [currentTheme]);
+  }, [settings.theme]);
 
   return (
     <React.Fragment>

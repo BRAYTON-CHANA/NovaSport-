@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -18,8 +18,8 @@ function DoughnutChart({
   const [chart, setChart] = useState(null)
   const canvas = useRef(null);
   const legend = useRef(null);
-  const { currentTheme } = useThemeProvider();
-  const darkMode = currentTheme === 'dark';
+  const { settings } = useSettings();
+  const darkMode = settings.theme === 'dark';
   const { tooltipTitleColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors; 
 
   useEffect(() => {
@@ -121,7 +121,7 @@ function DoughnutChart({
       chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
     }
     chart.update('none');
-  }, [currentTheme]);
+  }, [settings.theme]);
 
   return (
     <div className="grow flex flex-col justify-center">

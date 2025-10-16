@@ -1,8 +1,16 @@
-import React from "react";
-import { useThemeProvider } from "../utils/ThemeContext";
+import React from 'react'; // No se necesita useEffect
+import { useSettings } from '../context/SettingsContext';
 
 export default function ThemeToggle() {
-  const { currentTheme, changeCurrentTheme } = useThemeProvider();
+  const { settings, updateSettings } = useSettings();
+
+  // El useEffect que manipulaba el DOM ha sido ELIMINADO de aquí.
+  // Toda la lógica ahora está centralizada en SettingsContext.jsx
+
+  const handleToggle = () => {
+    // Ahora simplemente cambiamos el valor booleano de 'darkMode'
+    updateSettings({ darkMode: !settings.darkMode });
+  };
 
   return (
     <div>
@@ -11,13 +19,15 @@ export default function ThemeToggle() {
         name="light-switch"
         id="light-switch"
         className="light-switch sr-only"
-        checked={currentTheme === "light"}
-        onChange={() => changeCurrentTheme(currentTheme === "light" ? "dark" : "light")}
+        // El input se marca si darkMode es true
+        checked={settings.darkMode}
+        onChange={handleToggle}
       />
       <label
         className="flex items-center justify-center cursor-pointer w-8 h-8 hover:bg-gray-100 lg:hover:bg-gray-200 dark:hover:bg-gray-700/50 dark:lg:hover:bg-gray-800 rounded-full"
         htmlFor="light-switch"
       >
+        {/* Icono de Sol */}
         <svg
           className="dark:hidden fill-current text-gray-500/80 dark:text-gray-400/80"
           width={16}
@@ -29,6 +39,7 @@ export default function ThemeToggle() {
           <path d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-4 2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
           <path d="M13.657 3.757a1 1 0 0 0-1.414-1.414l-.354.354a1 1 0 0 0 1.414 1.414l.354-.354ZM13.5 8a1 1 0 0 1 1-1h.5a1 1 0 1 1 0 2h-.5a1 1 0 0 1-1-1ZM13.303 11.889a1 1 0 0 0-1.414 1.414l.354.354a1 1 0 0 0 1.414-1.414l-.354-.354ZM8 13.5a1 1 0 0 1 1 1v.5a1 1 0 1 1-2 0v-.5a1 1 0 0 1 1-1ZM4.111 13.303a1 1 0 1 0-1.414-1.414l-.354.354a1 1 0 1 0 1.414 1.414l.354-.354ZM0 8a1 1 0 0 1 1-1h.5a1 1 0 0 1 0 2H1a1 1 0 0 1-1-1ZM3.757 2.343a1 1 0 1 0-1.414 1.414l.354.354A1 1 0 1 0 4.11 2.697l-.354-.354Z" />
         </svg>
+        {/* Icono de Luna */}
         <svg
           className="hidden dark:block fill-current text-gray-500/80 dark:text-gray-400/80"
           width={16}

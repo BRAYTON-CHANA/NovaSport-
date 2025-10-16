@@ -7,7 +7,9 @@ export default defineConfig({
     'process.env': process.env
   },
   plugins: [react()],
+  base: './',
   build: {
+    outDir: 'build',
     commonjsOptions: {
       transformMixedEsModules: true,
     }

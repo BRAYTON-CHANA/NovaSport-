@@ -1,111 +1,144 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import LineChart from '../../charts/LineChart01';
-import { chartAreaGradient } from '../../charts/ChartjsConfig';
-import EditMenu from '../../components/DropdownEditMenu';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { 
+  useFormulario, 
+  NOMBRE_TABLA_BOLETAS_FACTURAS, 
+  NOMBRE_TABLA_REFERENCIAS_PAGO
+} from '../../context/FormularioContext';
 
-// Import utilities
-import { adjustColorOpacity, getCssVariable } from '../../utils/Utils';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function DashboardCard02() {
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(value);
+};
+
+function DashboardCard02({ dateRange }) {
+  const { database } = useFormulario();
+
+  const processDataForChart = () => {
+    const boletas = database[NOMBRE_TABLA_BOLETAS_FACTURAS] || [];
+    const todasLasReferencias = database[NOMBRE_TABLA_REFERENCIAS_PAGO] || [];
+    const boletasMap = new Map(boletas.map(b => [b.id, { tipo: b.Documento, anulado: b.Anulado }]));
+
+    const fechaInicio = dateRange?.from;
+    const fechaFin = dateRange?.to;
+
+    let labels = [];
+    let aggregatedData = {};
+    let mode = 'monthly';
+
+    if (!fechaInicio || !fechaFin) {
+      const today = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const key = d.toLocaleString('es-ES', { month: 'short', year: 'numeric' }).replace('.','').replace(' de','');
+        labels.push(key);
+        aggregatedData[key] = { boletas: 0, garantias: 0 };
+      }
+    } else {
+      const diffTime = Math.abs(fechaFin - fechaInicio);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      if (diffDays > 90) {
+        mode = 'monthly';
+        let currentDate = new Date(fechaInicio);
+        while (currentDate <= fechaFin) {
+          const key = currentDate.toLocaleString('es-ES', { month: 'short', year: 'numeric' }).replace('.','').replace(' de','');
+          if (!aggregatedData[key]) {
+            labels.push(key);
+            aggregatedData[key] = { boletas: 0, garantias: 0 };
+          }
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          currentDate.setDate(1);
+        }
+      } else {
+        mode = 'daily';
+        let currentDate = new Date(fechaInicio);
+        while (currentDate <= fechaFin) {
+          const key = currentDate.toLocaleString('es-ES', { day: '2-digit', month: 'short' }).replace('.','');
+          labels.push(key);
+          aggregatedData[key] = { boletas: 0, garantias: 0 };
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+    }
+
+    const referencias = todasLasReferencias.filter(r => {
+      if (!fechaInicio || !fechaFin) return true;
+      try {
+        const fechaReferencia = new Date(r.Fecha);
+        const normFechaInicio = new Date(fechaInicio); normFechaInicio.setHours(0, 0, 0, 0);
+        const normFechaFin = new Date(fechaFin); normFechaFin.setHours(23, 59, 59, 999);
+        return fechaReferencia >= normFechaInicio && fechaReferencia <= normFechaFin;
+      } catch (e) { return false; }
+    });
+
+    referencias.forEach(r => {
+      const importe = r.Importe || 0;
+      try {
+        const date = new Date(r.Fecha);
+        if (isNaN(date.getTime())) return;
+
+        let key;
+        if (mode === 'monthly') {
+          key = date.toLocaleString('es-ES', { month: 'short', year: 'numeric' }).replace('.','').replace(' de','');
+        } else {
+          key = date.toLocaleString('es-ES', { day: '2-digit', month: 'short' }).replace('.','');
+        }
+
+        if (aggregatedData.hasOwnProperty(key)) {
+          if (r.boletaFacturaId) {
+            const docInfo = boletasMap.get(r.boletaFacturaId);
+            if (docInfo && !docInfo.anulado) {
+              aggregatedData[key].boletas += importe;
+            }
+          } else {
+            aggregatedData[key].garantias += importe;
+          }
+        }
+      } catch(e) { /* Ignorar */ }
+    });
+    
+    const boletasData = labels.map(key => aggregatedData[key]?.boletas || 0);
+    const garantiasData = labels.map(key => aggregatedData[key]?.garantias || 0);
+
+    // Devolver `referencias` para usarlo fuera
+    return { labels, boletasData, garantiasData, referencias };
+  };
+
+  // Recibir `referencias` aquí
+  const { labels, boletasData, garantiasData, referencias } = processDataForChart();
 
   const chartData = {
-    labels: [
-      '12-01-2022', '01-01-2023', '02-01-2023',
-      '03-01-2023', '04-01-2023', '05-01-2023',
-      '06-01-2023', '07-01-2023', '08-01-2023',
-      '09-01-2023', '10-01-2023', '11-01-2023',
-      '12-01-2023', '01-01-2024', '02-01-2024',
-      '03-01-2024', '04-01-2024', '05-01-2024',
-      '06-01-2024', '07-01-2024', '08-01-2024',
-      '09-01-2024', '10-01-2024', '11-01-2024',
-      '12-01-2024', '01-01-2025',
-    ],
+    labels,
     datasets: [
-      // Indigo line
-      {
-        data: [
-          622, 622, 426, 471, 365, 365, 238,
-          324, 288, 206, 324, 324, 500, 409,
-          409, 273, 232, 273, 500, 570, 767,
-          808, 685, 767, 685, 685,
-        ],
-        fill: true,
-        backgroundColor: function(context) {
-          const chart = context.chart;
-          const {ctx, chartArea} = chart;
-          return chartAreaGradient(ctx, chartArea, [
-            { stop: 0, color: adjustColorOpacity(getCssVariable('--color-violet-500'), 0) },
-            { stop: 1, color: adjustColorOpacity(getCssVariable('--color-violet-500'), 0.2) }
-          ]);
-        },       
-        borderColor: getCssVariable('--color-violet-500'),
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 3,
-        pointBackgroundColor: getCssVariable('--color-violet-500'),
-        pointHoverBackgroundColor: getCssVariable('--color-violet-500'),
-        pointBorderWidth: 0,
-        pointHoverBorderWidth: 0,          
-        clip: 20,
-        tension: 0.2,
-      },
-      // Gray line
-      {
-        data: [
-          732, 610, 610, 504, 504, 504, 349,
-          349, 504, 342, 504, 610, 391, 192,
-          154, 273, 191, 191, 126, 263, 349,
-          252, 423, 622, 470, 532,
-        ],
-        borderColor: adjustColorOpacity(getCssVariable('--color-gray-500'), 0.25),
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 3,
-        pointBackgroundColor: adjustColorOpacity(getCssVariable('--color-gray-500'), 0.25),
-        pointHoverBackgroundColor: adjustColorOpacity(getCssVariable('--color-gray-500'), 0.25),
-        pointBorderWidth: 0,
-        pointHoverBorderWidth: 0,
-        clip: 20,
-        tension: 0.2,
-      },
+      { label: 'Ingresos por Boletas/Facturas', data: boletasData, borderColor: 'rgb(139, 92, 246)', backgroundColor: 'rgba(139, 92, 246, 0.5)', tension: 0.3 },
+      { label: 'Ingresos por Garantías', data: garantiasData, borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgba(34, 197, 94, 0.5)', tension: 0.3 },
     ],
   };
 
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' }, title: { display: false } },
+    scales: { y: { ticks: { callback: value => formatCurrency(value) } } },
+  };
+
   return (
-    <div className="flex flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
-      <div className="px-5 pt-5">
-        <header className="flex justify-between items-start mb-2">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Acme Advanced</h2>
-          {/* Menu button */}
-          <EditMenu align="right" className="relative inline-flex">
-            <li>
-              <Link className="font-medium text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 flex py-1 px-3" to="#0">
-                Option 1
-              </Link>
-            </li>
-            <li>
-              <Link className="font-medium text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 flex py-1 px-3" to="#0">
-                Option 2
-              </Link>
-            </li>
-            <li>
-              <Link className="font-medium text-sm text-red-500 hover:text-red-600 flex py-1 px-3" to="#0">
-                Remove
-              </Link>
-            </li>
-          </EditMenu>
-        </header>
-        <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase mb-1">Sales</div>
-        <div className="flex items-start">
-          <div className="text-3xl font-bold text-gray-800 dark:text-gray-100 mr-2">$17,489</div>
-          <div className="text-sm font-medium text-red-700 px-1.5 bg-red-500/20 rounded-full">-14%</div>
+    <div className="col-span-full xl:col-span-8 bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="p-5">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tendencia de Ingresos</h2>
+        <div className="h-[350px]">
+          {/* Usar `referencias` que ahora sí está en el scope correcto */}
+          {referencias.length > 0 ? (
+            <Line data={chartData} options={options} />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-gray-500">No hay datos para mostrar en el período seleccionado.</p>
+            </div>
+          )}
         </div>
-      </div>
-      {/* Chart built with Chart.js 3 */}
-      <div className="grow max-sm:max-h-[128px] max-h-[128px]">
-        {/* Change the height attribute to adjust the chart height */}
-        <LineChart data={chartData} width={389} height={128} />
       </div>
     </div>
   );

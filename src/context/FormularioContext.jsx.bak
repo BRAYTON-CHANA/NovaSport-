@@ -1,0 +1,216 @@
+
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { loadDatabasePromise, saveDatabase } from '../database/database';
+
+// --- Constantes para Nombres de Tablas ---
+export const NOMBRE_TABLA_CUENTAS_CONTABLES = 'CuentasContables';
+export const NOMBRE_TABLA_EVENTOS = 'Eventos';
+export const NOMBRE_TABLA_HORARIOS = 'Horarios';
+export const NOMBRE_TABLA_BOLETAS_FACTURAS = 'BoletasFacturas';
+export const NOMBRE_TABLA_GARANTIAS = 'Garantias';
+export const NOMBRE_TABLA_RECIBOS = 'Recibos'; // El "Libro Mayor"
+export const NOMBRE_TABLA_REFERENCIAS_PAGO = 'ReferenciasDePago';
+export const NOMBRE_TABLA_CODIGOS = 'Codigos';
+export const NOMBRE_TABLA_INSTALACIONES = 'Instalaciones';
+
+export const FormularioContext = createContext();
+
+export function FormularioProvider({ children }) {
+  // --- ESTADO PRINCIPAL ---
+  const [isLoading, setIsLoading] = useState(true);
+  const [database, setDatabase] = useState(null);
+  const [databaseOriginal, setDatabaseOriginal] = useState(null);
+  const [tieneCambiosSinGuardar, setTieneCambiosSinGuardar] = useState(false);
+  const [mensaje, setMensaje] = useState('');
+
+  // --- EFECTO DE CARGA INICIAL ---
+  useEffect(() => {
+    loadDatabasePromise.then(loadedDb => {
+      // Asegurarse que todas las tablas existan
+      const dbCompleto = {
+        [NOMBRE_TABLA_CUENTAS_CONTABLES]: [],
+        [NOMBRE_TABLA_EVENTOS]: [],
+        [NOMBRE_TABLA_HORARIOS]: [],
+        [NOMBRE_TABLA_BOLETAS_FACTURAS]: [],
+        [NOMBRE_TABLA_GARANTIAS]: [],
+        [NOMBRE_TABLA_RECIBOS]: [],
+        [NOMBRE_TABLA_REFERENCIAS_PAGO]: [],
+        [NOMBRE_TABLA_CODIGOS]: [],
+        [NOMBRE_TABLA_INSTALACIONES]: [],
+        ...loadedDb // Sobrescribe con los datos cargados
+      };
+      setDatabase(dbCompleto);
+      setDatabaseOriginal(dbCompleto);
+      setIsLoading(false);
+      console.log("Base de datos cargada y lista.");
+    }).catch(error => {
+      console.error("Error crítico al cargar la base de datos inicial:", error);
+      setMensaje("Error fatal: No se pudo cargar la base de datos.");
+      setIsLoading(false);
+    });
+  }, []);
+
+  // --- EFECTO PARA DETECTAR CAMBIOS ---
+  useEffect(() => {
+    if (!isLoading && database && databaseOriginal) {
+      const hayCambios = JSON.stringify(database) !== JSON.stringify(databaseOriginal);
+      setTieneCambiosSinGuardar(hayCambios);
+      if (hayCambios) {
+        setMensaje('Hay cambios sin guardar.');
+      } else {
+        setMensaje('');
+      }
+    }
+  }, [database, databaseOriginal, isLoading]);
+
+  // --- NUEVA FUNCIÓN TRANSACCIONAL ---
+  const agregarBoletaCompleta = useCallback((datos) => {
+    const { boletaData, garantiaData, garantiaActiva } = datos;
+
+    setDatabase(prevDb => {
+      const newDb = { ...prevDb }; // Copia mutable
+
+      // --- IDs INICIALES ---
+      let proximoReciboId = ((newDb[NOMBRE_TABLA_RECIBOS] || []).reduce((max, item) => (item.id > max ? item.id : max), 0)) + 1;
+      let proximoReferenciaId = ((newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] || []).reduce((max, item) => (item.id > max ? item.id : max), 0)) + 1;
+
+      // --- 1. BOLETA / FACTURA ---
+      const boletaId = ((newDb[NOMBRE_TABLA_BOLETAS_FACTURAS] || []).reduce((max, item) => (item.id > max ? item.id : max), 0)) + 1;
+      const nuevaBoleta = { ...boletaData, id: boletaId, referencias: null }; // Las referencias se mueven a su propia tabla
+      newDb[NOMBRE_TABLA_BOLETAS_FACTURAS] = [...(newDb[NOMBRE_TABLA_BOLETAS_FACTURAS] || []), nuevaBoleta];
+
+      // Asiento en el libro mayor
+      const tipoDoc = boletaData.Anulado ? 'ANULADO' : boletaData.Documento.toUpperCase();
+      newDb[NOMBRE_TABLA_RECIBOS] = [...(newDb[NOMBRE_TABLA_RECIBOS] || []), {
+        id: proximoReciboId++,
+        Tipo: tipoDoc,
+        NroReferencia: nuevaBoleta.NroRecibo,
+      }];
+
+      // Guardar sus referencias de pago
+      const refsBoleta = (boletaData.referencias || []).map(ref => ({
+        ...ref,
+        id: proximoReferenciaId++,
+        boletaFacturaId: boletaId, // Vínculo a la boleta
+      }));
+      newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] = [...(newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] || []), ...refsBoleta];
+
+      // --- 2. GARANTÍA (SI APLICA) ---
+      if (garantiaActiva && garantiaData) {
+        const garantiaId = ((newDb[NOMBRE_TABLA_GARANTIAS] || []).reduce((max, item) => (item.id > max ? item.id : max), 0)) + 1;
+        const nuevaGarantia = { ...garantiaData, id: garantiaId, boletaFacturaId: boletaId, referencias: null };
+        newDb[NOMBRE_TABLA_GARANTIAS] = [...(newDb[NOMBRE_TABLA_GARANTIAS] || []), nuevaGarantia];
+
+        // Asiento en el libro mayor
+        newDb[NOMBRE_TABLA_RECIBOS] = [...(newDb[NOMBRE_TABLA_RECIBOS] || []), {
+          id: proximoReciboId++,
+          Tipo: 'GARANTIA',
+          NroReferencia: `G-${nuevaGarantia.id}`,
+        }];
+        
+        // Guardar sus referencias de pago
+        const refsGarantia = (garantiaData.referencias || []).map(ref => ({
+          ...ref,
+          id: proximoReferenciaId++,
+          garantiaId: garantiaId, // Vínculo a la garantía
+        }));
+        newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] = [...newDb[NOMBRE_TABLA_REFERENCIAS_PAGO], ...refsGarantia];
+      }
+
+      return newDb;
+    });
+
+    setTieneCambiosSinGuardar(true);
+    setMensaje('Documento complejo añadido. No olvide guardar los cambios.');
+  }, [isLoading]);
+
+
+  // --- FUNCIONES DE MODIFICACIÓN GENÉRICAS ---
+  const agregarRegistro = useCallback((tabla, nuevoRegistro) => {
+    if (isLoading) return Promise.reject('La base de datos se está cargando');
+    return new Promise(resolve => {
+      setDatabase(prevDb => {
+        const tablaActual = prevDb[tabla] || [];
+        const maxId = tablaActual.reduce((max, item) => (item.id > max ? item.id : max), 0);
+        const registroConId = { ...nuevoRegistro, id: maxId + 1 };
+        const newDb = { ...prevDb, [tabla]: [...tablaActual, registroConId] };
+        resolve(registroConId);
+        return newDb;
+      });
+      setTieneCambiosSinGuardar(true);
+      setMensaje('Registro añadido. No olvide guardar los cambios.');
+    });
+  }, [isLoading]);
+
+  const eliminarRegistro = useCallback((tabla, id) => {
+    if (isLoading) return;
+    setDatabase(prevDb => {
+      const newDb = { ...prevDb };
+      newDb[tabla] = (prevDb[tabla] || []).filter(r => r.id !== id);
+      // Lógica de borrado en cascada
+      if (tabla === NOMBRE_TABLA_EVENTOS) {
+          newDb[NOMBRE_TABLA_HORARIOS] = (prevDb[NOMBRE_TABLA_HORARIOS] || []).filter(h => h.eventoId !== id);
+      }
+      if (tabla === NOMBRE_TABLA_BOLETAS_FACTURAS) {
+          const refsAEliminar = (prevDb[NOMBRE_TABLA_REFERENCIAS_PAGO] || []).filter(r => r.boletaFacturaId === id).map(r => r.id);
+          newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] = (prevDb[NOMBRE_TABLA_REFERENCIAS_PAGO] || []).filter(r => r.boletaFacturaId !== id);
+          const garantiasAEliminar = (prevDb[NOMBRE_TABLA_GARANTIAS] || []).filter(g => g.boletaFacturaId === id).map(g => g.id);
+          newDb[NOMBRE_TABLA_GARANTIAS] = (prevDb[NOMBRE_TABLA_GARANTIAS] || []).filter(g => g.boletaFacturaId !== id);
+          if(garantiasAEliminar.length > 0) {
+               newDb[NOMBRE_TABLA_REFERENCIAS_PAGO] = newDb[NOMBRE_TABLA_REFERENCIAS_PAGO].filter(r => !garantiasAEliminar.includes(r.garantiaId));
+          }
+      }
+    
+      return newDb;
+    });
+    setTieneCambiosSinGuardar(true);
+    setMensaje('Registro eliminado. No olvide guardar los cambios.');
+  }, [isLoading]);
+
+  // --- CONTROL DE CAMBIOS ---
+  const guardarCambios = useCallback(() => {
+    if (!tieneCambiosSinGuardar) return Promise.resolve();
+    setMensaje('Guardando...');
+    return saveDatabase(database).then(() => {
+      setDatabaseOriginal(database);
+      setTieneCambiosSinGuardar(false);
+      setMensaje('¡Cambios guardados con éxito!');
+      setTimeout(() => setMensaje(''), 2000);
+    }).catch(error => {
+      console.error("Error al guardar los cambios:", error);
+      setMensaje('Error al guardar. Revise la consola.');
+    });
+  }, [database, tieneCambiosSinGuardar]);
+
+  const descartarCambios = useCallback(() => {
+    if(!tieneCambiosSinGuardar) return;
+    setDatabase(databaseOriginal);
+    setTieneCambiosSinGuardar(false);
+    setMensaje('Cambios descartados.');
+    setTimeout(() => setMensaje(''), 2000);
+  }, [databaseOriginal, tieneCambiosSinGuardar]);
+
+  if (isLoading) {
+    return <div>Cargando base de datos...</div>;
+  }
+
+  const value = {
+    database,
+    isLoading,
+    agregarRegistro,
+    agregarBoletaCompleta, // Exportar la nueva función
+    eliminarRegistro,
+    mensaje,
+    tieneCambiosSinGuardar,
+    guardarCambios,
+    descartarCambios,
+  };
+
+  return (
+    <FormularioContext.Provider value={value}>
+      {children}
+    </FormularioContext.Provider>
+  );
+}
+
+export const useFormulario = () => useContext(FormularioContext);

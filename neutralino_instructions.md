@@ -90,7 +90,10 @@ Este es el archivo de configuración principal para NeutralinoJS. Debe apuntar a
     "writeToLogFile": true
   },
   "nativeAllowList": [
-    "app.*"
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "os.showMessageBox"
   ],
   "modes": {
     "window": {
@@ -100,7 +103,8 @@ Este es el archivo de configuración principal para NeutralinoJS. Debe apuntar a
       "minWidth": 400,
       "minHeight": 200,
       "icon": "public/icon.png",
-      "enableInspector": true
+      "enableInspector": false,
+      "exitProcessOnClose": false
     }
   },
   "cli": {

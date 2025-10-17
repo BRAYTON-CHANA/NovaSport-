@@ -6,6 +6,7 @@ import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
 import DashboardCard03 from '../partials/dashboard/DashboardCard03';
+import DashboardCard04 from '../partials/dashboard/DashboardCard04'; // Importar la nueva tarjeta
 
 function Dashboard() {
 
@@ -37,14 +38,21 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* --- NUEVO LAYOUT DEL GRID -- */}
+            {/* --- Contenedor principal del grid --- */}
             <div className="grid grid-cols-12 gap-6">
-              {/* Card 01 ahora ocupa todo el ancho */}
+
+              {/* Card 01 (Ocupa todo el ancho) */}
               <DashboardCard01 dateRange={date} />
               
-              {/* Card 02 y 03 se sientan debajo */}
+              {/* Card 02 (Ocupa 2/3 del ancho en pantallas grandes) */}
               <DashboardCard02 dateRange={date} />
+
+              {/* Card 03 (Ocupa 1/3 del ancho en pantallas grandes) */}
               <DashboardCard03 dateRange={date} />
+
+              {/* Nueva Card 04 (Ocupa 1/2 del ancho en pantallas grandes) */}
+              <DashboardCard04 dateRange={date} />
+
             </div>
 
           </div>

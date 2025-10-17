@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import {
   Routes,
   Route,
@@ -8,21 +8,21 @@ import {
 import './css/style.css';
 import './charts/ChartjsConfig';
 
-// Import pages
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Horarios from './pages/Horarios';
-import Database from './pages/Database';
-import AñadirEvento from './pages/AñadirEvento';
-import EditarEvento from './pages/EditarEvento';
-import GestionEventos from './pages/GestionEventos';
-import AñadirBoletaFactura from './pages/AñadirBoletaFactura';
-import EditarBoletaFactura from './pages/EditarBoletaFactura';
-import Backups from './pages/Backups';
-import ViewExcel from './pages/ViewExcel';
-import Reportes from './pages/Reportes';
-import GestionBoletas from './pages/GestionBoletas';
-import Menu from './pages/Menu'; // <-- Nueva importación
+// Import pages using React.lazy
+const Home = lazy(() => import('./pages/Home'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Horarios = lazy(() => import('./pages/Horarios'));
+const Database = lazy(() => import('./pages/Database'));
+const AñadirEvento = lazy(() => import('./pages/AñadirEvento'));
+const EditarEvento = lazy(() => import('./pages/EditarEvento'));
+const GestionEventos = lazy(() => import('./pages/GestionEventos'));
+const AñadirBoletaFactura = lazy(() => import('./pages/AñadirBoletaFactura'));
+const EditarBoletaFactura = lazy(() => import('./pages/EditarBoletaFactura'));
+const Backups = lazy(() => import('./pages/Backups'));
+const ViewExcel = lazy(() => import('./pages/ViewExcel'));
+const Reportes = lazy(() => import('./pages/Reportes'));
+const GestionBoletas = lazy(() => import('./pages/GestionBoletas'));
+const Menu = lazy(() => import('./pages/Menu'));
 
 // Importar el contexto y el componente de notificación
 import { useFormulario } from './context/FormularioContext';
@@ -83,22 +83,24 @@ function App() {
 
   return (
     <>
-      <Routes>
-        <Route exact path="/" element={<Home />} />
-        <Route path="/menu" element={<Menu />} /> {/* <-- Nueva ruta */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/horarios" element={<Horarios />} />
-        <Route path="/database" element={<Database />} />
-        <Route path="/añadir-evento" element={<AñadirEvento />} />
-        <Route path="/editar-evento/:eventoId" element={<EditarEvento />} />
-        <Route path="/gestion-eventos" element={<GestionEventos />} />
-        <Route path="/gestion-boletas" element={<GestionBoletas />} />
-        <Route path="/añadir-boleta-factura" element={<AñadirBoletaFactura />} />
-        <Route path="/editar-boleta-factura/:id" element={<EditarBoletaFactura />} />
-        <Route path="/backups" element={<Backups />} />
-        <Route path="/view-excel" element={<ViewExcel />} />
-        <Route path="/reportes" element={<Reportes />} />
-      </Routes>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route exact path="/" element={<Home />} />
+          <Route path="/menu" element={<Menu />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/horarios" element={<Horarios />} />
+          <Route path="/database" element={<Database />} />
+          <Route path="/añadir-evento" element={<AñadirEvento />} />
+          <Route path="/editar-evento/:eventoId" element={<EditarEvento />} />
+          <Route path="/gestion-eventos" element={<GestionEventos />} />
+          <Route path="/gestion-boletas" element={<GestionBoletas />} />
+          <Route path="/añadir-boleta-factura" element={<AñadirBoletaFactura />} />
+          <Route path="/editar-boleta-factura/:id" element={<EditarBoletaFactura />} />
+          <Route path="/backups" element={<Backups />} />
+          <Route path="/view-excel" element={<ViewExcel />} />
+          <Route path="/reportes" element={<Reportes />} />
+        </Routes>
+      </Suspense>
 
       <SaveNotification
         open={tieneCambiosSinGuardar}

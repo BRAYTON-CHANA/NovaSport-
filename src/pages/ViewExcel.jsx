@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ExcelJS from 'exceljs';
 
 import Sidebar from '../partials/Sidebar';
 import Header from '../partials/Header';
@@ -25,8 +24,9 @@ function ViewExcel() {
 
     reader.onload = async (evt) => {
       try {
+        const ExcelJS = await import('exceljs');
         const buffer = evt.target.result;
-        const workbook = new ExcelJS.Workbook();
+        const workbook = new ExcelJS.default.Workbook();
         await workbook.xlsx.load(buffer);
 
         const allSheetData = [];
